@@ -1,0 +1,232 @@
+{
+  "entities": {
+    "Branch": {
+      "title": "Branch",
+      "description": "Information about a physical microfinance branch",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "region": { "type": "string" },
+        "managerName": { "type": "string" },
+        "createdDate": { "type": "string" }
+      },
+      "required": ["id", "name", "code", "region", "managerName", "createdDate"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile containing roles and permissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "position": { "type": "string" },
+        "branch": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "password": { "type": "string" },
+        "role": { "type": "string" },
+        "permissions": { "type": "array" },
+        "activeStatus": { "type": "string" },
+        "createdDate": { "type": "string" },
+        "lastActive": { "type": "string" }
+      },
+      "required": ["id", "name", "position", "branch", "email", "phone", "role", "permissions", "activeStatus", "createdDate"]
+    },
+    "SheetLink": {
+      "title": "SheetLink",
+      "description": "A Google Spreadsheet linked for real-time syncing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "url": { "type": "string" },
+        "addedBy": { "type": "string" },
+        "addedDate": { "type": "string" },
+        "lastUpdated": { "type": "string" },
+        "recordCount": { "type": "number" }
+      },
+      "required": ["id", "title", "url", "addedBy", "addedDate", "lastUpdated", "recordCount"]
+    },
+    "FinancialRecord": {
+      "title": "FinancialRecord",
+      "description": "Loanee client's credit bookkeeping ledger item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "borrowerName": { "type": "string" },
+        "branchName": { "type": "string" },
+        "amountDisbursed": { "type": "number" },
+        "expectedRepayment": { "type": "number" },
+        "actualRepayment": { "type": "number" },
+        "interestRate": { "type": "number" },
+        "expenses": { "type": "number" },
+        "status": { "type": "string" },
+        "uploadedBy": { "type": "string" }
+      },
+      "required": ["id", "date", "borrowerName", "branchName", "amountDisbursed", "expectedRepayment", "actualRepayment", "interestRate", "expenses", "status", "uploadedBy"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Organizational task or duty assigned to workers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "assignedTo": { "type": "string" },
+        "assignedToName": { "type": "string" },
+        "assignedToEmail": { "type": "string" },
+        "assignedBy": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "progress": { "type": "number" },
+        "createdDate": { "type": "string" }
+      },
+      "required": ["id", "title", "description", "assignedToName", "assignedToEmail", "assignedBy", "dueDate", "status", "progress", "createdDate"]
+    },
+    "AlertNotification": {
+      "title": "AlertNotification",
+      "description": "Global warnings and loanee anomalous alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string" },
+        "severity": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "branchName": { "type": "string" }
+      },
+      "required": ["id", "title", "description", "type", "severity", "timestamp", "isRead", "branchName"]
+    },
+    "CommunicationMessage": {
+      "title": "CommunicationMessage",
+      "description": "Message block exchanged on channels",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderEmail": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "recipientEmail": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "message": { "type": "string" },
+        "channel": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "senderEmail", "senderName", "recipientEmail", "recipientName", "message", "timestamp"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Chronological system audit and security logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "role": { "type": "string" },
+        "action": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "ipAddress": { "type": "string" }
+      },
+      "required": ["id", "userEmail", "userName", "action", "timestamp"]
+    },
+    "FinanceSubmissionTemplate": {
+      "title": "FinanceSubmissionTemplate",
+      "description": "Standard Ledger Submission Template metadata and instructions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "instructions": { "type": "string" },
+        "requiredColumns": { "type": "array" },
+        "targetInterestRate": { "type": "number" },
+        "maxDisbursedAmount": { "type": "number" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "title", "instructions", "requiredColumns", "targetInterestRate", "maxDisbursedAmount", "updatedAt", "createdBy"]
+    },
+    "ManualFlow": {
+      "title": "ManualFlow",
+      "description": "Overridden cash flow values (opening balance, banked amount) from reporting day sheets",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "openingCash": { "type": "number" },
+        "bankedAmount": { "type": "number" }
+      },
+      "required": ["id", "openingCash", "bankedAmount"]
+    },
+    "LoanAttachment": {
+      "title": "LoanAttachment",
+      "description": "Uploaded receipts, PDF agreements or picture proofs associated with credit accounts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "borrowerName": { "type": "string" },
+        "details": { "type": "string" },
+        "fileType": { "type": "string" },
+        "fileSize": { "type": "string" },
+        "fileData": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "branchName": { "type": "string" }
+      },
+      "required": ["id", "name", "date", "borrowerName", "details", "fileType", "fileSize", "fileData", "uploadedBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "branches": {
+      "schema": "Branch",
+      "description": "Corporate outlets of the credit firm"
+    },
+    "users": {
+      "schema": "User",
+      "description": "System loanee control officers, credentials, and configuration"
+    },
+    "sheetLinks": {
+      "schema": "SheetLink",
+      "description": "Spreadsheets dynamically connected payload"
+    },
+    "records": {
+      "schema": "FinancialRecord",
+      "description": "Loanee transactions and disbursements registers"
+    },
+    "tasks": {
+      "schema": "Task",
+      "description": "Duties assigned to physical branch specialists"
+    },
+    "alerts": {
+      "schema": "AlertNotification",
+      "description": "Warnings and risk limits exceptions triggered"
+    },
+    "messages": {
+      "schema": "CommunicationMessage",
+      "description": "Chat and inter-staff dispatch archives"
+    },
+    "audits": {
+      "schema": "AuditLog",
+      "description": "Zero trust audit action logs tracker"
+    },
+    "templates": {
+      "schema": "FinanceSubmissionTemplate",
+      "description": "Global regulatory financial templates for compliance"
+    },
+    "manualFlows": {
+      "schema": "ManualFlow",
+      "description": "Overridden branch daily sheet balances and banked amounts"
+    },
+    "loanAttachments": {
+      "schema": "LoanAttachment",
+      "description": "Uploaded documents in relation to the loan accounts"
+    }
+  }
+}

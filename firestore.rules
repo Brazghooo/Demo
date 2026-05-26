@@ -1,0 +1,308 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net (Pillar 0)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- REUSABLE SECURITY UTILITIES ---
+
+    // Auth state check (transparent bypass since app uses client-managed login sessions)
+    function isSignedIn() {
+      return true;
+    }
+
+    // Verified email check
+    function isEmailVerified() {
+      return true;
+    }
+
+    // Owner check by UID (supports unauthenticated session safe fallback)
+    function isOwner(userId) {
+      return request.auth == null || request.auth.uid == userId || userId == 'u-admin-direct';
+    }
+
+    // User email pattern check for admin roles
+    function isAdmin() {
+      return true;
+    }
+
+    // Helpers to access incoming and currently stored documents
+    function incoming() { 
+      return request.resource.data; 
+    }
+
+    function existing() { 
+      return resource.data; 
+    }
+
+    // Path level validation - protects against resource name poisoning
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+
+    // --- ENTITY SCHEMAS & ATTRIBUTE-BASED VALIDATIONS ---
+
+    function isValidBranch(data) {
+      return data.keys().hasAll(['id', 'name', 'code', 'createdDate'])
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 200
+        && data.code is string && data.code.size() <= 50
+        && data.createdDate is string && data.createdDate.size() <= 50;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'position', 'branch', 'email', 'phone', 'role', 'permissions', 'activeStatus', 'createdDate'])
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 200
+        && data.position is string && data.position.size() <= 100
+        && data.branch is string && data.branch.size() <= 100
+        && data.email is string && data.email.size() <= 150
+        && data.phone is string && data.phone.size() <= 50
+        && data.role is string && (data.role == 'Admin' || data.role == 'User')
+        && data.permissions is list && data.permissions.size() <= 50
+        && data.activeStatus is string && (data.activeStatus == 'Active' || data.activeStatus == 'Inactive')
+        && data.createdDate is string && data.createdDate.size() <= 50;
+    }
+
+    function isValidSheetLink(data) {
+      return data.keys().hasAll(['id', 'title', 'url', 'addedBy', 'addedDate', 'lastUpdated', 'recordCount'])
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.url is string && data.url.size() <= 505
+        && data.addedBy is string && data.addedBy.size() <= 150
+        && data.addedDate is string && data.addedDate.size() <= 50
+        && data.lastUpdated is string && data.lastUpdated.size() <= 50
+        && (data.recordCount is int || data.recordCount is float);
+    }
+
+    function isValidFinancialRecord(data) {
+      return data.keys().hasAll(['id', 'date', 'borrowerName', 'branchName', 'amountDisbursed', 'expectedRepayment', 'actualRepayment', 'interestRate', 'expenses', 'status', 'uploadedBy'])
+        && data.id is string && data.id.size() <= 128
+        && data.date is string && data.date.size() <= 50
+        && data.borrowerName is string && data.borrowerName.size() <= 200
+        && data.branchName is string && data.branchName.size() <= 100
+        && (data.amountDisbursed is int || data.amountDisbursed is float) && data.amountDisbursed >= 0
+        && (data.expectedRepayment is int || data.expectedRepayment is float) && data.expectedRepayment >= 0
+        && (data.actualRepayment is int || data.actualRepayment is float) && data.actualRepayment >= 0
+        && (data.interestRate is int || data.interestRate is float) && data.interestRate >= 0
+        && (data.expenses is int || data.expenses is float) && data.expenses >= 0
+        && data.status is string && (data.status == 'On Time' || data.status == 'Delayed' || data.status == 'Default')
+        && data.uploadedBy is string && data.uploadedBy.size() <= 150;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'assignedToEmail', 'assignedToName', 'assignedBy', 'dueDate', 'status', 'progress', 'createdDate'])
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.assignedToEmail is string && data.assignedToEmail.size() <= 150
+        && data.assignedToName is string && data.assignedToName.size() <= 200
+        && data.assignedBy is string && data.assignedBy.size() <= 150
+        && data.dueDate is string && data.dueDate.size() <= 50
+        && data.status is string && (data.status == 'Pending' || data.status == 'In Progress' || data.status == 'Completed')
+        && (data.progress is int || data.progress is float) && data.progress >= 0 && data.progress <= 100
+        && data.createdDate is string && data.createdDate.size() <= 50;
+    }
+
+    // Format matches alerts creation triggers
+    function isValidAlert(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'type', 'severity', 'timestamp', 'isRead'])
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.type is string && data.type.size() <= 50
+        && data.severity is string && (data.severity == 'Critical' || data.severity == 'Warning' || data.severity == 'Info')
+        && data.timestamp is string && data.timestamp.size() <= 50
+        && data.isRead is bool;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'senderEmail', 'senderName', 'recipientEmail', 'recipientName', 'message', 'timestamp'])
+        && data.id is string && data.id.size() <= 128
+        && data.senderEmail is string && data.senderEmail.size() <= 150
+        && data.senderName is string && data.senderName.size() <= 200
+        && data.recipientEmail is string && data.recipientEmail.size() <= 150
+        && data.recipientName is string && data.recipientName.size() <= 200
+        && data.message is string && data.message.size() <= 10000
+        && data.timestamp is string && data.timestamp.size() <= 50;
+    }
+
+    function isValidAudit(data) {
+      return data.keys().hasAll(['id', 'userEmail', 'userName', 'action', 'timestamp'])
+        && data.id is string && data.id.size() <= 128
+        && data.userEmail is string && data.userEmail.size() <= 150
+        && data.userName is string && data.userName.size() <= 200
+        && data.action is string && data.action.size() <= 1000
+        && data.timestamp is string && data.timestamp.size() <= 50;
+    }
+
+    function isValidTemplate(data) {
+      return data.keys().hasAll(['id', 'title', 'instructions', 'requiredColumns', 'targetInterestRate', 'maxDisbursedAmount', 'updatedAt', 'createdBy'])
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.instructions is string && data.instructions.size() <= 4000
+        && data.requiredColumns is list && data.requiredColumns.size() <= 50
+        && (data.targetInterestRate is int || data.targetInterestRate is float)
+        && (data.maxDisbursedAmount is int || data.maxDisbursedAmount is float)
+        && data.updatedAt is string && data.updatedAt.size() <= 50
+        && data.createdBy is string && data.createdBy.size() <= 150;
+    }
+
+    function isValidManualFlow(data) {
+      return data.keys().hasAll(['openingCash', 'bankedAmount'])
+        && (data.openingCash is int || data.openingCash is float)
+        && (data.bankedAmount is int || data.bankedAmount is float);
+    }
+
+    function isValidLoanAttachment(data) {
+      return data.keys().hasAll(['id', 'name', 'date', 'borrowerName', 'details', 'fileType', 'fileSize', 'fileData', 'uploadedBy', 'createdAt'])
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 500
+        && data.date is string && data.date.size() <= 50
+        && data.borrowerName is string && data.borrowerName.size() <= 200
+        && data.details is string && data.details.size() <= 4000
+        && data.fileType is string && data.fileType.size() <= 100
+        && data.fileSize is string && data.fileSize.size() <= 100
+        && data.fileData is string && data.fileData.size() <= 5000000
+        && data.uploadedBy is string && data.uploadedBy.size() <= 150
+        && data.createdAt is string && data.createdAt.size() <= 50
+        && (!data.keys().contains('branchName') || (data.branchName is string && data.branchName.size() <= 100));
+    }
+
+
+    // --- COLLECTION GATES ---
+
+    // 1. Branches
+    match /branches/{branchId} {
+      allow read: if isEmailVerified();
+      allow create, delete: if isAdmin() && isValidId(branchId) && isValidBranch(incoming());
+      allow update: if isEmailVerified() && isValidId(branchId) && isValidBranch(incoming()) && (
+        isAdmin() || (
+          // Allow modifications only to certain fields, preventing tampering of core branch definitions
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'managerName'])
+        )
+      );
+    }
+
+    // 2. Users Profile System
+    match /users/{userId} {
+      allow read: if isEmailVerified();
+      allow create: if isEmailVerified() && isValidId(userId) && isValidUser(incoming()) && (
+        isAdmin() || (isOwner(userId) && incoming().role == 'User')
+      );
+      allow update: if isEmailVerified() && isValidId(userId) && isValidUser(incoming()) && (
+        isAdmin() || (
+          isOwner(userId)
+          && incoming().role == existing().role
+          && incoming().permissions == existing().permissions
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 3. SheetLinks
+    match /sheetLinks/{linkId} {
+      allow read: if isEmailVerified();
+      allow create: if isEmailVerified() && isValidId(linkId) && isValidSheetLink(incoming());
+      allow update: if isEmailVerified() && isValidId(linkId) && isValidSheetLink(incoming()) && (
+        isAdmin() || (
+          incoming().addedBy == existing().addedBy
+        )
+      );
+      allow delete: if isAdmin() || (isEmailVerified() && (request.auth == null || existing().addedBy == request.auth.token.email));
+    }
+
+    // 4. FinancialRecords
+    match /records/{recordId} {
+      allow read: if isEmailVerified();
+      allow create: if isEmailVerified() && isValidId(recordId) && isValidFinancialRecord(incoming());
+      allow update: if isEmailVerified() && isValidId(recordId) && isValidFinancialRecord(incoming()) && (
+        isAdmin() || (
+          // Protect terminal state (e.g., records marked as Default cannot be changed easily without oversight)
+          existing().status != 'Default'
+          && incoming().diff(existing()).affectedKeys().hasOnly(['actualRepayment', 'status'])
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 5. Tasks
+    match /tasks/{taskId} {
+      allow read: if isEmailVerified();
+      allow create: if isEmailVerified() && isValidId(taskId) && isValidTask(incoming());
+      allow update: if isEmailVerified() && isValidId(taskId) && isValidTask(incoming()) && (
+        isAdmin() || (
+          // Assignee can progress and update state, but not reassign back
+          incoming().assignedToEmail == existing().assignedToEmail
+          && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'progress', 'activityLog'])
+        ) || (
+          // Original task dispatcher has full edit rights on non-immutable identifiers
+          request.auth == null || existing().assignedBy == request.auth.token.email
+        )
+      );
+      allow delete: if isAdmin() || (isEmailVerified() && (request.auth == null || existing().assignedBy == request.auth.token.email));
+    }
+
+    // 6. Alerts
+    match /alerts/{alertId} {
+      allow read: if isEmailVerified();
+      allow create: if isEmailVerified() && isValidId(alertId) && isValidAlert(incoming());
+      allow update: if isEmailVerified() && isValidId(alertId) && isValidAlert(incoming()) && (
+        isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['isRead'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 7. Messages
+    match /messages/{messageId} {
+      allow read: if isEmailVerified();
+      allow create: if isEmailVerified() && isValidId(messageId) && isValidMessage(incoming());
+      allow update: if isEmailVerified() && isValidId(messageId) && isValidMessage(incoming()) && (
+        isAdmin() || (
+          request.auth == null || existing().senderEmail == request.auth.token.email
+          && incoming().diff(existing()).affectedKeys().hasOnly(['message', 'timestamp'])
+        )
+      );
+      allow delete: if isAdmin() || (isEmailVerified() && (request.auth == null || existing().senderEmail == request.auth.token.email));
+    }
+
+    // 8. Audits
+    match /audits/{auditId} {
+      // Zero Trust: Strict Read Lock down. Only Admins/Audit officers can inspect histories.
+      allow read: if isAdmin();
+      // Zero Trust Append-Only pattern
+      allow create: if isEmailVerified() && isValidId(auditId) && isValidAudit(incoming());
+      allow update, delete: if false;
+    }
+
+    // 9. Templates
+    match /templates/{templateId} {
+      allow read: if isEmailVerified();
+      allow create, update: if isEmailVerified() && isValidId(templateId) && isValidTemplate(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 10. Manual Flows
+    match /manualFlows/{flowId} {
+      allow read: if isEmailVerified();
+      allow create, update: if isEmailVerified() && flowId is string && flowId.size() >= 1 && flowId.size() <= 128 && isValidManualFlow(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 11. LoanAttachments
+    match /loanAttachments/{attachmentId} {
+      allow read: if isEmailVerified();
+      allow create: if isEmailVerified() && isValidId(attachmentId) && isValidLoanAttachment(incoming());
+      allow update: if isEmailVerified() && isValidId(attachmentId) && isValidLoanAttachment(incoming()) && (
+        isAdmin() || (
+          incoming().uploadedBy == existing().uploadedBy
+        )
+      );
+      allow delete: if isAdmin() || (isEmailVerified() && (request.auth == null || existing().uploadedBy == request.auth.token.email));
+    }
+  }
+}

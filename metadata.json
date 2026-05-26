@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: FlowDash Microfinance",
+  "description": "An elegant central vault and real-time ledger reporting system for microfinance branches and clerk audits.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
